@@ -14,6 +14,19 @@ defmodule Aoc17.Day2 do
     |> Enum.sum
   end
 
+  @doc ~S"""
+    iex> Aoc17.Day2.part2("5 9 2 8\n9 4 7 3\n3 8 6 5")
+    9
+  """
+  def part2(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+    |> Enum.map(&divisible_pair/1)
+    |> Enum.map(&div_pair/1)
+    |> Enum.sum
+  end
+
   defp parse_line(line) do
     line
     |> String.split
@@ -33,4 +46,12 @@ defmodule Aoc17.Day2 do
   end
 
   defp diff({big, small}), do: big - small
+
+  defp divisible_pair(list) do
+    for n1 <- list, n2 <- list, rem(n1, n2) == 0, n1 != n2 do
+      {n1, n2}
+    end
+  end
+
+  defp div_pair([{n1, n2}]), do: div(n1, n2)
 end
