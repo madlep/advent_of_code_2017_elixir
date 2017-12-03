@@ -13,20 +13,10 @@ defmodule Aoc17.Day3 do
     def step(%State{
       width: width,
       progress: progress,
-    } = state)
-    when progress < width do
-      update_state(state)
-      |> struct(progress: progress + 1)
-    end
-
-    def step(%State{
-      width: width,
-      progress: progress,
       heading: heading,
       side: side,
-    } = state)
-    when progress == width do
-      update_state(state)
+    } = state) when progress == width do
+      update(state)
       |> struct(
         progress: 1,
         width: grow_width(width, side),
@@ -35,16 +25,16 @@ defmodule Aoc17.Day3 do
       )
     end
 
+    def step(%State{progress: progress} = state) do
+      update(state)
+      |> struct(progress: progress + 1)
+    end
+
     def distance(%State{pos: {x, y}}), do: abs(x) + abs(y)
 
     def data(%State{pos: pos, data: data}), do: data[pos]
 
-    defp update_state(%State{
-      pos: pos,
-      heading: heading,
-      n: n,
-      data: data
-    } = state) do
+    defp update(%State{pos: pos, heading: heading, n: n, data: data} = state) do
       new_pos = move(pos, heading)
       %State{state|
         n: n + 1,
@@ -95,10 +85,7 @@ defmodule Aoc17.Day3 do
     iex> Aoc17.Day3.part1(1024)
     31
   """
-  def part1(input) do
-    at(input)
-    |> State.distance
-  end
+  def part1(input), do: at(input) |> State.distance
 
   @doc """
     iex> Aoc17.Day3.part2(1)
@@ -118,19 +105,12 @@ defmodule Aoc17.Day3 do
   """
   def part2(input) do
     stream()
-    |> Enum.find(fn(state) -> State.data(state) > input end)
+    |> Enum.find(&(State.data(&1) > input))
     |> State.data
   end
 
-  defp stream do
-    Stream.unfold(%State{}, fn(state) ->
-      {state, State.step(state)}
-    end)
-  end
+  def at(input), do: stream() |> Enum.at(input - 1)
 
-  def at(input) do
-    stream()
-    |> Enum.at(input - 1)
-  end
+  defp stream, do: Stream.iterate(%State{}, &State.step/1)
 
 end
