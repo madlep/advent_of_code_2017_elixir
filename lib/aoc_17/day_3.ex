@@ -11,49 +11,47 @@ defmodule Aoc17.Day3 do
     ]
 
     def step(%State{
-      n: n,
-      pos: pos,
       width: width,
       progress: progress,
-      heading: heading,
-      data: data
     } = state)
     when progress < width do
-      new_pos = move(pos, heading)
-      %State{state|
-        n: n+1,
-        pos: new_pos,
-        progress: progress + 1,
-        data: Map.put(data, new_pos, adjacent_sum(new_pos, data))
-      }
+      update_state(state)
+      |> struct(progress: progress + 1)
     end
 
     def step(%State{
-      n: n,
-      pos: pos,
       width: width,
       progress: progress,
       heading: heading,
       side: side,
-      data: data
     } = state)
     when progress == width do
-      new_heading = rotate(heading)
-      new_pos = move(pos, heading)
-      %State{state|
-        n: n + 1,
-        pos: new_pos,
+      update_state(state)
+      |> struct(
         progress: 1,
         width: grow_width(width, side),
         side: side + 1,
-        heading: new_heading,
-        data: Map.put(data, new_pos, adjacent_sum(new_pos, data))
-      }
+        heading: rotate(heading)
+      )
     end
 
     def distance(%State{pos: {x, y}}), do: abs(x) + abs(y)
 
     def data(%State{pos: pos, data: data}), do: data[pos]
+
+    defp update_state(%State{
+      pos: pos,
+      heading: heading,
+      n: n,
+      data: data
+    } = state) do
+      new_pos = move(pos, heading)
+      %State{state|
+        n: n + 1,
+        pos: new_pos,
+        data: Map.put(data, new_pos, adjacent_sum(new_pos, data))
+      }
+    end
 
     defp move({x,y}, :right), do: {x+1,  y}
     defp move({x,y}, :up)   , do: {x,    y-1}
