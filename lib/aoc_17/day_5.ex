@@ -9,7 +9,7 @@ defmodule Aoc17.Day5 do
     |> String.split("\n")
     |> Enum.map(&parse_int/1)
     |> build_jmps
-    |> jmp_escape
+    |> jmp_escape(fn(jmp) -> jmp + 1 end)
   end
 
   defp parse_int(str) do
@@ -23,12 +23,12 @@ defmodule Aoc17.Day5 do
     |> Enum.reduce(%{}, fn({jmp, i}, jmps) -> Map.put(jmps, i, jmp) end)
   end
 
-  defp jmp_escape(jmps), do: jmp_escape(0, jmps, 0)
+  defp jmp_escape(jmps, incr), do: jmp_escape(0, jmps, 0, incr)
 
-  defp jmp_escape(i, jmps, count) do
+  defp jmp_escape(i, jmps, count, incr) do
     case jmps[i] do
       nil   -> count
-      jmp -> jmp_escape(i + jmp, Map.update!(jmps, i, &(&1 + 1)), count + 1)
+      jmp -> jmp_escape(i + jmp, Map.update!(jmps, i, incr), count + 1, incr)
     end
   end
 end
