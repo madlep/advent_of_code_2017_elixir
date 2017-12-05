@@ -10,6 +10,20 @@ defmodule Aoc17.Day5 do
     |> jmp_escape(fn(jmp) -> jmp + 1 end)
   end
 
+  @doc ~S"""
+    iex> Aoc17.Day5.part2("0\n3\n0\n1\n-3\n")
+    10
+  """
+  def part2(input) do
+    input
+    |> parse
+    |> build_jmps
+    |> jmp_escape(fn
+      (jmp) when jmp >= 3 -> jmp - 1
+      (jmp) -> jmp + 1
+    end)
+  end
+
   defp parse(input) do
     input
     |> String.trim
