@@ -57,7 +57,6 @@ defmodule Aoc17.Day4 do
     no_dups?(words) && no_anagrams?(words)
   end
 
-  # TODO refactor to Enum.reduce_while
   defp no_dups?(words), do: no_dups?(words, MapSet.new)
   defp no_dups?([], _set), do: true
   defp no_dups?([word|words], set) do
