@@ -5,11 +5,16 @@ defmodule Aoc17.Day5 do
   """
   def part1(input) do
     input
+    |> parse
+    |> build_jmps
+    |> jmp_escape(fn(jmp) -> jmp + 1 end)
+  end
+
+  defp parse(input) do
+    input
     |> String.trim
     |> String.split("\n")
     |> Enum.map(&parse_int/1)
-    |> build_jmps
-    |> jmp_escape(fn(jmp) -> jmp + 1 end)
   end
 
   defp parse_int(str) do
