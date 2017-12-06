@@ -4,11 +4,9 @@ defmodule Aoc17.Day6 do
     5
   """
   def part1(input) do
-    {_loop_size, loop_at} = input
-    |> parse
-    |> detect_loop
-
-    loop_at
+    input
+    |> do_part
+    |> elem(1)
   end
 
   @doc ~S"""
@@ -16,11 +14,15 @@ defmodule Aoc17.Day6 do
     4
   """
   def part2(input) do
-    {loop_size, _loop_at} = input
+    input
+    |> do_part
+    |> elem(0)
+  end
+
+  defp do_part(input) do
+    input
     |> parse
     |> detect_loop
-
-    loop_size
   end
 
   @doc ~S"""
