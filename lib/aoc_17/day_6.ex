@@ -4,10 +4,23 @@ defmodule Aoc17.Day6 do
     5
   """
   def part1(input) do
-    input
+    {_loop_size, loop_at} = input
     |> parse
     |> detect_loop
-    |> Enum.count
+
+    loop_at
+  end
+
+  @doc ~S"""
+    iex> Aoc17.Day6.part2("0 2 7 0")
+    4
+  """
+  def part2(input) do
+    {loop_size, _loop_at} = input
+    |> parse
+    |> detect_loop
+
+    loop_size
   end
 
   @doc ~S"""
@@ -42,11 +55,11 @@ defmodule Aoc17.Day6 do
   defp detect_loop(starting_banks) do
     starting_banks
     |> Stream.iterate(&redistribute/1)
-    |> Enum.reduce_while(MapSet.new, fn(banks, configurations) ->
-      if MapSet.member?(configurations, banks) do
-        {:halt, configurations}
-      else
-        {:cont, MapSet.put(configurations, banks)}
+    |> Stream.with_index
+    |> Enum.reduce_while(%{}, fn({banks, i}, configurations) ->
+      case configurations[banks] do
+        nil -> {:cont, Map.put(configurations, banks, i)}
+        loop_start -> {:halt, {i - loop_start, Enum.count(configurations)}}
       end
     end)
   end
