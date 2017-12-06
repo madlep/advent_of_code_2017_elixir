@@ -5,18 +5,9 @@ defmodule Aoc17.Day6 do
   """
   def part1(input) do
     input
-    |> String.trim
-    |> String.split
-    |> Enum.map(&String.to_integer/1)
-    |> Stream.iterate(&redistribute/1)
-    |> Enum.reduce_while(MapSet.new, fn(banks, configurations) ->
-      if MapSet.member?(configurations, banks) do
-        {:halt, configurations}
-      else
-        {:cont, MapSet.put(configurations, banks)}
-      end
-    end)
-    |> MapSet.size
+    |> parse
+    |> detect_loop
+    |> Enum.count
   end
 
   @doc ~S"""
@@ -39,6 +30,25 @@ defmodule Aoc17.Day6 do
     banks
     |> empty_largest
     |> do_redistribute
+  end
+
+  defp parse(input) do
+    input
+    |> String.trim
+    |> String.split
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  defp detect_loop(starting_banks) do
+    starting_banks
+    |> Stream.iterate(&redistribute/1)
+    |> Enum.reduce_while(MapSet.new, fn(banks, configurations) ->
+      if MapSet.member?(configurations, banks) do
+        {:halt, configurations}
+      else
+        {:cont, MapSet.put(configurations, banks)}
+      end
+    end)
   end
 
   defp empty_largest(banks) do
