@@ -12,9 +12,16 @@ defmodule Parser do
       |> Enum.reverse
       |> Enum.map(&deep_reverse/1)
     rescue
-      Protocol.UndefinedError -> maybe_enum
+      Protocol.UndefinedError ->
+        maybe_string_reverse(maybe_enum)
     end
   end
+
+  defp maybe_string_reverse(str) when is_binary(str) do
+    String.reverse(str)
+  end
+
+  defp maybe_string_reverse(not_str), do: not_str
 
   defp null(), do: fn(input) -> {[], input} end
 
@@ -45,7 +52,7 @@ defmodule Parser do
   """
   def char(parser \\ null(), c) do
     build_parser(parser, fn(input) ->
-      case anychar() |> parse(input) do
+      case anychar().(input) do
         {[^c], rest} -> {c, rest}
         {_not_c, _rest} -> :nomatch
         :nomatch -> :nomatch
@@ -75,6 +82,7 @@ defmodule Parser do
 
   @doc ~S"""
   parse an alphabetic character (a-z, A-Z)
+
   iex> import Parser
   iex> alpha() |> parse("foobar")
   {["f"], "oobar"}
@@ -97,16 +105,15 @@ defmodule Parser do
 
   @doc ~S"""
   match many parsers
+
   iex> import Parser
   iex> many(alpha()) |> parse("foo bar baz")
   {[["f", "o", "o"]], " bar baz"}
   """
   def many(parser \\ null(), parser2) do
-    fn(input) ->
-      {prior_result, new_input} = parser.(input)
-      {result, rest} = do_many(new_input, parser2, [])
-      {[result | prior_result], rest}
-    end
+    build_parser(parser, fn(input) ->
+      do_many(input, parser2, [])
+    end)
   end
 
   defp do_many(input, parser, result) do
@@ -116,9 +123,9 @@ defmodule Parser do
     end
   end
 
-
   @doc ~S"""
   match a word
+
   iex> import Parser
   iex> word() |> parse("foo bar baz")
   {["foo"], " bar baz"}
@@ -129,7 +136,7 @@ defmodule Parser do
   """
   def word(parser \\ null()) do
     build_parser(parser, fn(input) ->
-      {[result], rest} = (many(alpha()) |> parse(input))
+      {[result], rest} = many(alpha()).(input)
       case Enum.join(result) do
         "" -> :nomatch
         word -> {word, rest}
@@ -139,6 +146,7 @@ defmodule Parser do
 
   @doc ~S"""
   match a parser between two other parsers (e.g. term between brackets etc)
+
   iex> import Parser
   iex> between(char("("), word(), char(")")) |> parse("(foo)bar")
   {["foo"], "bar"}
@@ -147,9 +155,9 @@ defmodule Parser do
   """
   def between(parser \\ null(), parser_left, parser2, parser_right) do
     build_parser(parser, fn(input) ->
-      with {[], rest}       <- (ignore(parser_left) |> parse(input)),
-           {[result], rest} <- (parser2 |> parse(rest)),
-           {[], rest}       <- (ignore(parser_right) |> parse(rest)),
+      with {[], rest}       <- ignore(parser_left).(input),
+           {[result], rest} <- parser2.(rest),
+           {[], rest}       <- ignore(parser_right).(rest),
         do: {result, rest}
     end)
   end
@@ -163,7 +171,7 @@ defmodule Parser do
   """
   def ignore(parser \\ null(), parser2) do
     build_parser(parser, fn(input) ->
-      case (parser2 |> parse(input)) do
+      case parser2.(input) do
         {_result, rest} -> {:noresult, rest}
         :nomatch        -> :nomatch
       end
@@ -215,7 +223,7 @@ defmodule Parser do
   """
   def skip(parser \\ null(), parser2) do
     build_parser(parser, fn(input) ->
-      case (parser2 |> parse(input)) do
+      case parser2.(input) do
         {_result, rest} -> {:noresult, rest}
         :nomatch        -> {:noresult, input}
       end
@@ -231,6 +239,71 @@ defmodule Parser do
     build_parser(parser, fn
       (<<" ", rest::binary>>) -> {" ", rest}
       (_input) -> :nomatch
+    end)
+  end
+
+  @doc ~S"""
+  parse if term matches
+  iex> import Parser
+  iex> word() |> option(skip(space()) |> word()) |> parse("foo bar")
+  {["foo", "bar"], ""}
+  iex> word() |> option(skip(space()) |> word()) |> parse("foo")
+  {["foo", nil], ""}
+  """
+  def option(parser \\ null(), parser2) do
+    build_parser(parser, fn(input) ->
+      case parser2.(input) do
+        {[result], rest} -> {result, rest}
+        :nomatch         -> {nil, input}
+      end
+    end)
+  end
+
+  @doc ~S"""
+  match a specific string
+  iex> import Parser
+  iex> string("foo") |> string("bar") |> parse("foobarbaz")
+  {["foo", "bar"], "baz"}
+  iex> string("foo") |> string("bar") |> parse("foobZrbaz")
+  :nomatch
+  """
+  def string(parser \\ null(), s) do
+    size = byte_size(s)
+    build_parser(parser, fn
+      (<<^s::bytes-size(size), rest::binary>>) -> {String.reverse(s), rest}
+      (_rest) -> :nomatch
+    end)
+  end
+
+  @doc ~S"""
+  match parser and ignore optional space at either side
+  iex> import Parser
+  iex> trim(string("foo")) |> parse("   foo   bar")
+  {["foo"], "bar"}
+  """
+  def trim(parser \\ null(), parser2) do
+    build_parser(parser, fn(input) ->
+      with {[], rest}       <- skip(many(space())).(input),
+           {[result], rest} <- parser2.(rest),
+           {[], rest}       <- skip(many(space())).(rest),
+        do: {result, rest}
+    end)
+  end
+
+  @doc ~S"""
+  match parser separated by given parser
+  iex> import Parser
+  iex> sep_by(word(), char(",")) |> parse("foo,bar,baz cheese")
+  {[["foo", "bar", "baz"]], " cheese"}
+  iex> sep_by(word(), char(",")) |> parse("foo,bar baz cheese")
+  {[["foo", "bar"]], " baz cheese"}
+  """
+  def sep_by(parser \\ null(), parser2, parser_sep, options \\ []) do
+    build_parser(parser, fn(input) ->
+      case (many(parser2 |> skip(parser_sep))).(input)  do
+        {[result], rest} -> {result, rest}
+        :nomatch         -> :nomatch
+      end
     end)
   end
 end
