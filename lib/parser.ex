@@ -12,16 +12,9 @@ defmodule Parser do
       |> Enum.reverse
       |> Enum.map(&deep_reverse/1)
     rescue
-      Protocol.UndefinedError ->
-        maybe_string_reverse(maybe_enum)
+      Protocol.UndefinedError -> maybe_enum
     end
   end
-
-  defp maybe_string_reverse(str) when is_binary(str) do
-    String.reverse(str)
-  end
-
-  defp maybe_string_reverse(not_str), do: not_str
 
   defp null(), do: fn(input) -> {[], input} end
 
@@ -137,7 +130,7 @@ defmodule Parser do
   def word(parser \\ null()) do
     build_parser(parser, fn(input) ->
       {[result], rest} = many(alpha()).(input)
-      case Enum.join(result) do
+      case result |> Enum.reverse |> Enum.join do
         "" -> :nomatch
         word -> {word, rest}
       end
@@ -270,7 +263,7 @@ defmodule Parser do
   def string(parser \\ null(), s) do
     size = byte_size(s)
     build_parser(parser, fn
-      (<<^s::bytes-size(size), rest::binary>>) -> {String.reverse(s), rest}
+      (<<^s::bytes-size(size), rest::binary>>) -> {s, rest}
       (_rest) -> :nomatch
     end)
   end
