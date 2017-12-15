@@ -299,4 +299,19 @@ defmodule Parser do
       end
     end)
   end
+
+  @doc ~S"""
+  match newline
+  iex> import Parser
+  iex> word() |> newline() |> word() |> parse("foo\nbar")
+  {["foo", "\n", "bar"], ""}
+  """
+  def newline(parser \\ null()) do
+    build_parser(parser, fn(input) ->
+      case char("\n").(input) do
+        {["\n"], rest} -> {"\n", rest}
+        :nomatch -> :nomatch
+      end
+    end)
+  end
 end
