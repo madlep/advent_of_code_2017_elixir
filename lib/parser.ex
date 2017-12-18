@@ -297,11 +297,25 @@ defmodule Parser do
   """
   def sep_by(parser \\ null(), parser2, parser_sep, options \\ []) do
     build_parser(parser, fn(input) ->
-      case (many(parser2 |> skip(parser_sep))).(input)  do
-        {[result], rest} -> {result, rest}
-        :nomatch         -> :nomatch
+      case parser2.(input) do
+        {[result], rest} -> do_sep_by(rest, parser2, parser_sep, [result])
+        :nomatch -> {[], input}
       end
     end)
+  end
+
+  defp do_sep_by(input, parser, parser_sep, results) do
+    case ignore(parser_sep).(input) do
+      :nomatch    ->
+        {results, input}
+      {[], rest}  ->
+        case parser.(rest) do
+          :nomatch ->
+            {[results], input}
+          {[result], rest} ->
+            do_sep_by(rest, parser, parser_sep, [result|results])
+        end
+    end
   end
 
   @doc ~S"""
