@@ -273,6 +273,10 @@ defmodule Parser do
   iex> import Parser
   iex> trim(string("foo")) |> parse("   foo   bar")
   {["foo"], "bar"}
+  iex> trim(string("foo")) |> parse("foo   bar")
+  {["foo"], "bar"}
+  iex> trim(string("foo")) |> parse("foobar")
+  {["foo"], "bar"}
   """
   def trim(parser \\ null(), parser2) do
     build_parser(parser, fn(input) ->
