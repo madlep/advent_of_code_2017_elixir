@@ -13,9 +13,9 @@ defmodule ParserTest do
                |> sep_by(word(), trim(char(",")), at_least_one: true)
              )
 
-    assert parse(parser, "pbga (66)") == {["pbga", 66, []], ""}
+    assert parse(parser, "pbga (66)") == %Parser.Result{value: ["pbga", 66, []], rest: ""}
     assert parse(parser, "fwft (72) -> ktlj, cntj, xhth") ==
-      {["fwft", 72, ["ktlj", "cntj", "xhth"]], ""}
+      %Parser.Result{value: ["fwft", 72, [["ktlj"], ["cntj"], ["xhth"]]], rest: ""}
   end
 
   test "can parse AOC day 7 multiple lines" do
@@ -33,12 +33,11 @@ defmodule ParserTest do
     )
 
     assert parse(parser, "pbga (66)\nfwft (72) -> ktlj, cntj, xhth") ==
-      {
+      %Parser.Result{value: [
         [
           ["pbga", 66, [] ],
-          ["fwft", 72, ["ktlj", "cntj", "xhth"]]
-        ],
-        ""
-      }
+          ["fwft", 72, [[ "ktlj" ],[ "cntj"],[  "xhth" ]]]
+        ]
+      ], rest: "" }
   end
 end
