@@ -31,7 +31,7 @@ defmodule Parser do
     |> Result.reverse
   end
 
-  defp null(), do: fn(input) -> %Result{value: [], rest: input} end
+  def null(), do: fn(input) -> %Result{value: [], rest: input} end
 
   defp build_parser(parser, parser_fn) do
     fn(input) ->
@@ -316,28 +316,44 @@ defmodule Parser do
   %Parser.Result{value: [[["foo"], ["bar"], ["baz"]]], rest: " cheese"}
   iex> sep_by(word(), char(",")) |> parse("foo,bar baz cheese")
   %Parser.Result{value: [[["foo"], ["bar"]]], rest: " baz cheese"}
+  iex> sep_by(word(), char(",")) |> parse("foo,bar cheese")
+  %Parser.Result{value: [[["foo"], ["bar"]]], rest: " cheese"}
+  iex> sep_by(word(), char(",")) |> parse("foo cheese")
+  %Parser.Result{value: [[["foo"]]], rest: " cheese"}
+  iex> null() |> sep_by(word(), char(","), unlist: true) |> parse("foo,bar,baz cheese")
+  %Parser.Result{value: [["foo", "bar", "baz"]], rest: " cheese"}
   """
   def sep_by(parser \\ null(), parser2, parser_sep, options \\ []) do
     build_parser(parser, fn(input) ->
       case parser2.(input) do
-        %Result{value: result, rest: rest} -> do_sep_by(rest, parser2, parser_sep, [result])
-        %NoMatch{} -> %Result{value: [], rest: input}
+        %Result{value: result, rest: rest} ->
+          do_sep_by(rest, parser2, parser_sep, [result], options)
+        %NoMatch{} ->
+          %Result{value: [], rest: input}
       end
     end)
   end
 
-  defp do_sep_by(input, parser, parser_sep, results) do
+  defp do_sep_by(input, parser, parser_sep, results, options) do
     case ignore(parser_sep).(input) do
-      %NoMatch{}    ->
-        %Result{value: results, rest: input}
+      %NoMatch{} ->
+        %Result{value: results |> Enum.map(&unlist(&1, options[:unlist])), rest: input}
       %Result{value: [], rest: rest}  ->
         case parser.(rest) do
           %NoMatch{} ->
-            %Result{value: [results], rest: input}
+            %Result{value: results |> Enum.map(&unlist(&1, options[:unlist])), rest: input}
           %Result{value: result, rest: rest} ->
-            do_sep_by(rest, parser, parser_sep, [result|results])
+            do_sep_by(rest, parser, parser_sep, [result|results], options)
         end
     end
+  end
+
+  defp unlist(v, _) when not is_list(v), do: v
+  defp unlist(l, unlist?) when unlist? in [nil, false], do: l
+  defp unlist([], true), do: []
+  defp unlist([value], true), do: value
+  defp unlist([_h|_t]=l, true) do
+    raise "can't unlist. Result has more than one element result=#{inspect(l)}"
   end
 
   @doc ~S"""
